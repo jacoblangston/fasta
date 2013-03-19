@@ -24,7 +24,17 @@ def addOptions(parser):
     parser.add_option("-s", "--segment", dest="segment",
                       help = "a specific region to repeat")
     parser.add_option("-t", "--segmentCount", dest="segmentCount",
-                       help = "the number of times to repeat a segment")    
+                       help = "the number of times to repeat a segment")
+    parser.add_option("-H", "--heterozygosity", dest="heterozygosity",
+                      help = "percent of heterozygosity")
+    
+def changeBase(baseList, currentBase):
+    newBase = currentBase
+    while newBase == currentBase:
+        index = random.randint(0, len(baseList) - 1)
+        newBase = baseList[index]
+        
+    return newBase
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -36,6 +46,7 @@ if __name__ == '__main__':
     filename = None
     numberOfBases = 1027
     gcContentPercentage = .41
+    heterozygosity = 0
     repeatBase = []
     repeatRegionCount = []
     segmentCount= []
@@ -69,6 +80,9 @@ if __name__ == '__main__':
         
     if 'segmentCount' in optionsDictionary and optionsDictionary['segmentCount'] is not None:
         segmentCount = optionsDictionary['segmentCount'].split(',')
+        
+    if 'heterozygosity' in optionsDictionary and optionsDictionary['heterozygosity'] is not None:
+        heterozygosity = float(optionsDictionary['heterozygosity'])
     
     if len(repeatBase) != len(repeatRegionCount) or len(repeatBase) != len(repeatBaseLength) or len(repeatRegionCount) != len(repeatBaseLength):
         print "Repeat bases, repeat region count, and repeat base length must have the same number of items specified."
@@ -134,9 +148,28 @@ if __name__ == '__main__':
     while j < len(bases):
         sortedBases.append(bases[j])
         j += 1
-        if j > 0 and j % 79 == 0:
-            sortedBases.append("\n")
-            print j
+            
+    if heterozygosity > 0:
+        sortedBases += sortedBases
+        
+        i = 0
+        changedBases = []
+        numberOfBasesToChange = int((len(sortedBases) - 1) * heterozygosity)
+        while i < numberOfBasesToChange:
+            index = random.randint(numberOfBases, len(sortedBases) - 1)
+            while changedBases.count(index) > 0:
+                index = random.randint(numberOfBases, len(sortedBases) - 1)
+            
+            currentBase = sortedBases[index]
+            sortedBases[index] = changeBase(baseList, currentBase)
+            changedBases.append(index)
+            i += 1
+            
+    j = 0
+    while j < len(sortedBases):
+        if j > 0 and j % 80 == 0:
+            sortedBases.insert(j - 1, "\n")
+        j += 1
         
     output += ''.join(sortedBases)
     output += '\n'
