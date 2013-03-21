@@ -10,27 +10,27 @@ from optparse import OptionParser
 
 def addOptions(parser):
     parser.add_option("-n", "--number", dest="bases", 
-                      help = "the number of base pairs")
+                      help = "The number of base pairs")
     parser.add_option("-o", "--output", dest="output",
-                      help = "the name of the output file")
+                      help = "The name of the output file")
     parser.add_option("-g", "--gcContentPercentage", dest="gc",
-                      help = "the percentage of the simulated reference genome that consists of guanines and cytosines")
+                      help = "The percentage of the simulated reference genome that consists of guanines and cytosines")
     parser.add_option("-b", "--repeatBase", dest="repeatBase",
-                      help = "the base to repeat in a repeat region containing a single base")
+                      help = "The base to repeat in a repeat region containing a single base")
     parser.add_option("-r", "--repeatRegionCount", dest="repeatRegionCount",
-                      help = "the number of times to repeat a single base region")
+                      help = "The number of times to repeat a single base region")
     parser.add_option("-l", "--repeatBaseLength", dest="repeatBaseLength",
-                      help = "the length of a single base region")
+                      help = "The length of a single base region")
     parser.add_option("-s", "--segment", dest="segment",
-                      help = "a specific region to repeat")
+                      help = "A specific region to repeat")
     parser.add_option("-t", "--segmentCount", dest="segmentCount",
-                      help = "the number of times to repeat a segment")
+                      help = "The number of times to repeat a segment")
     parser.add_option("-H", "--heterozygosity", dest="heterozygosity",
-                      help = "percent of heterozygosity")
+                      help = "Percent of heterozygosity")
     parser.add_option("-i", "--insertionPercent", dest="insertionPercent",
-                      help = "the percent of insertions")
+                      help = "The percent of insertions")
     parser.add_option("-d", "--deletionPercent", dest="deletionPercent",
-                      help = "the percent of deletions")
+                      help = "The percent of deletions")
     
 def changeBase(baseList, currentBase):
     newBase = currentBase
