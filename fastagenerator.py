@@ -24,9 +24,13 @@ def addOptions(parser):
     parser.add_option("-s", "--segment", dest="segment",
                       help = "a specific region to repeat")
     parser.add_option("-t", "--segmentCount", dest="segmentCount",
-                       help = "the number of times to repeat a segment")
+                      help = "the number of times to repeat a segment")
     parser.add_option("-H", "--heterozygosity", dest="heterozygosity",
                       help = "percent of heterozygosity")
+    parser.add_option("-i", "--insertionPercent", dest="insertionPercent",
+                      help = "the percent of insertions")
+    parser.add_option("-d", "--deletionPercent", dest="deletionPercent",
+                      help = "the percent of deletions")
     
 def changeBase(baseList, currentBase):
     newBase = currentBase
@@ -47,11 +51,13 @@ if __name__ == '__main__':
     numberOfBases = 1027
     gcContentPercentage = .41
     heterozygosity = 0
+    insertionPercent = 0
+    deletionPercent = 0
+    numberOfRepeatCharacters = 0
     repeatBase = []
     repeatRegionCount = []
     segmentCount= []
     repeatBaseLength = []
-    numberOfRepeatCharacters = 0
     segment = []
     repeatSegment = ''
     
@@ -83,6 +89,12 @@ if __name__ == '__main__':
         
     if 'heterozygosity' in optionsDictionary and optionsDictionary['heterozygosity'] is not None:
         heterozygosity = float(optionsDictionary['heterozygosity'])
+        
+    if 'insertionPercent' in optionsDictionary and optionsDictionary['insertionPercent'] is not None:
+        insertionPercent = float(optionsDictionary['insertionPercent'])
+        
+    if 'deletionPercent' in optionsDictionary and optionsDictionary['deletionPercent'] is not None:
+        deletionPercent = float(optionsDictionary['deletionPercent'])
     
     if len(repeatBase) != len(repeatRegionCount) or len(repeatBase) != len(repeatBaseLength) or len(repeatRegionCount) != len(repeatBaseLength):
         print "Repeat bases, repeat region count, and repeat base length must have the same number of items specified."
@@ -90,7 +102,11 @@ if __name__ == '__main__':
         
     if len(segment) != len(segmentCount):
         print "Segment and segment count must have the same number of items specified."
-        sys.exit()    
+        sys.exit()
+        
+    if heterozygosity == 0 and (insertionPercent > 0 or deletionPercent > 0):
+        print "Heterozygosity must be specified for insertions and deletions."
+        sys.exit()
 
     i = 0
     baseCharacterCountTotal = 0
@@ -144,10 +160,10 @@ if __name__ == '__main__':
         i -= 1
     
     sortedBases = []
-    j = 0
-    while j < len(bases):
-        sortedBases.append(bases[j])
-        j += 1
+    i = 0
+    while i < len(bases):
+        sortedBases.append(bases[i])
+        i += 1
             
     if heterozygosity > 0:
         sortedBases += sortedBases
@@ -165,11 +181,29 @@ if __name__ == '__main__':
             changedBases.append(index)
             i += 1
             
-    j = 0
-    while j < len(sortedBases):
-        if j > 0 and j % 80 == 0:
-            sortedBases.insert(j - 1, "\n")
-        j += 1
+        i = 0
+        numberOfDeletions = int((len(sortedBases) - 1) * deletionPercent)
+        while i < numberOfDeletions:
+            index = random.randint(numberOfBases, len(sortedBases) - 1)
+            base = baseList[random.randint(0, len(baseList) - 1)]
+            sortedBases.pop(index)
+            sortedBases.append(base)
+            i += 1        
+        
+        i = 0
+        numberOfInsertions = int((len(sortedBases) - 1) * insertionPercent)
+        while i < numberOfInsertions:
+            index = random.randint(numberOfBases, len(sortedBases) - 1)
+            base = baseList[random.randint(0, len(baseList) - 1)]
+            sortedBases.insert(index, base)
+            sortedBases.pop()
+            i += 1
+            
+    i = 0
+    while i < len(sortedBases):
+        if i > 0 and i % 80 == 0:
+            sortedBases.insert(i - 1, "\n")
+        i += 1
         
     output += ''.join(sortedBases)
     output += '\n'
