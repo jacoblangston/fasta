@@ -1,12 +1,19 @@
 # Author: Kelsey and Jacob Langston
 # Url: https://github.com/jacoblangston/fasta
 #
-# Generates fasta files using the format specified at
-# http://en.wikipedia.org/wiki/FASTA_format.
+# Generates fasta and qual files using the format specified at:
+# http://en.wikipedia.org/wiki/FASTA_format
+# http://bioperl.org/wiki/Qual_sequence_format
+#
+# How to convert fasta to fastq using BioPython:
+# http://biopython.org/DIST/docs/tutorial/Tutorial.html#sec:SeqIO-fastq-conversion
 
 import random
 import sys
 from optparse import OptionParser
+from os.path import basename
+from Bio import SeqIO
+from Bio.SeqIO.QualityIO import PairedFastaQualIterator
 
 def addOptions(parser):
     parser.add_option("-n", "--number", dest="bases", 
@@ -17,7 +24,7 @@ def addOptions(parser):
                       help = "The percentage of the simulated reference genome that consists of guanines and cytosines")
     parser.add_option("-b", "--repeatBase", dest="repeatBase",
                       help = "The base to repeat in a repeat region containing a single base")
-    parser.add_option("-r", "--repeatRegionCount", dest="repeatRegionCount",
+    parser.add_option("-R", "--repeatRegionCount", dest="repeatRegionCount",
                       help = "The number of times to repeat a single base region")
     parser.add_option("-l", "--repeatBaseLength", dest="repeatBaseLength",
                       help = "The length of a single base region")
@@ -31,6 +38,8 @@ def addOptions(parser):
                       help = "The percent of insertions")
     parser.add_option("-d", "--deletionPercent", dest="deletionPercent",
                       help = "The percent of deletions")
+    parser.add_option("-c", "--convertFormat", dest="convertFormat",
+                      help = "Format to convert fasta file to; clustal, fastq-illumina, fastq-sanger, fastq-solexa, phylip, phd, tab, stockholm")
     
 def changeBase(baseList, currentBase):
     newBase = currentBase
@@ -40,6 +49,38 @@ def changeBase(baseList, currentBase):
         
     return newBase
 
+def convert(convertFormat, filename, qualFilename):
+    print "\nFastA file information:"
+    for seq_record in SeqIO.parse(filename, "fasta"):
+        print "Number of Records: " + str(seq_record)  
+    
+    try:
+        with open(baseFilename + ".fastq", "w") as q:
+            records = PairedFastaQualIterator(open(filename), open(qualFilename))
+            count = SeqIO.write(records, q, convertFormat)
+            print "Converted %i records" % count 
+    except ValueError, e:
+        print "Encountered error converting file: " + str(e)
+    
+def generateQual(baseFilename, numberOfBases, minQuality, maxQuality):
+    qualFilename = baseFilename + ".qual"
+    quality = ">" + baseFilename + "\n"
+    
+    i = 0
+    while i < numberOfBases:
+        quality += str(getQuality(minQuality, maxQuality)) + " "
+        if i > 0 and i % 79 == 0:
+            quality += "\n"
+        i += 1
+        
+    with open(qualFilename, "w") as q:
+        q.write(quality)
+        
+    return qualFilename
+    
+def getQuality(minQuality, maxQuality):
+    return random.randint(minQuality, maxQuality)
+
 if __name__ == '__main__':
     parser = OptionParser()
     addOptions(parser)
@@ -48,18 +89,22 @@ if __name__ == '__main__':
     
     baseList = ['G', 'C', 'T', 'A']
     filename = None
-    numberOfBases = 1027
+    baseFilename = None
+    numberOfBases = 1000
     gcContentPercentage = .41
     heterozygosity = 0
     insertionPercent = 0
     deletionPercent = 0
     numberOfRepeatCharacters = 0
+    minQuality = 11
+    maxQuality = 41
     repeatBase = []
     repeatRegionCount = []
     segmentCount= []
     repeatBaseLength = []
     segment = []
     repeatSegment = ''
+    convertFormat = None
     
     if 'gc' in optionsDictionary and optionsDictionary['gc'] is not None:
         gcContentPercentage = float(optionsDictionary['gc'])
@@ -70,7 +115,9 @@ if __name__ == '__main__':
     if 'output' in optionsDictionary and optionsDictionary['output'] is not None:
         filename = optionsDictionary['output']
     else:
-        filename = 'originalsequence-' + str(numberOfBases) + '.fa'
+        filename = 'originalsequence-' + str(numberOfBases) + '.fasta'
+    
+    baseFilename = basename(filename).rsplit(".")[0]  
     
     if 'repeatBase' in optionsDictionary and optionsDictionary['repeatBase'] is not None:
         repeatBase = optionsDictionary['repeatBase'].split(',')
@@ -95,6 +142,9 @@ if __name__ == '__main__':
         
     if 'deletionPercent' in optionsDictionary and optionsDictionary['deletionPercent'] is not None:
         deletionPercent = float(optionsDictionary['deletionPercent'])
+        
+    if 'convertFormat' in optionsDictionary and optionsDictionary['convertFormat'] is not None:
+        convertFormat = optionsDictionary['convertFormat']
     
     if len(repeatBase) != len(repeatRegionCount) or len(repeatBase) != len(repeatBaseLength) or len(repeatRegionCount) != len(repeatBaseLength):
         print "Repeat bases, repeat region count, and repeat base length must have the same number of items specified."
@@ -122,7 +172,7 @@ if __name__ == '__main__':
             
     numberOfRepeatCharacters = baseCharacterCountTotal + segmentCharacterCountTotal
 
-    output = '>' + filename + '\n'
+    output = '>' + baseFilename + '\n'
     bases = []
     
     i = 0
@@ -198,18 +248,25 @@ if __name__ == '__main__':
             sortedBases.insert(index, base)
             sortedBases.pop()
             i += 1
-            
+         
+    totalBases = len(sortedBases)    
+    
     i = 0
     while i < len(sortedBases):
-        if i > 0 and i % 80 == 0:
+        if i > 0 and i % 79 == 0:
             sortedBases.insert(i - 1, "\n")
         i += 1
-        
+    
     output += ''.join(sortedBases)
-    output += '\n'
+    output += "\n"
     
-    file = open(filename, 'w')
-    file.write(output)
+    with open(filename, 'w') as fa:
+        fa.write(output)
+        print "Wrote " + filename
     
-    print "Wrote " + filename
+    qualFilename = generateQual(baseFilename, totalBases, minQuality, maxQuality)
+    
+    if convertFormat is not None:
+        convert(convertFormat, filename, qualFilename)
+        
     sys.exit()

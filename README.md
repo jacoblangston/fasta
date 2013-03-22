@@ -9,8 +9,8 @@ Usage: fastagenerator.py [options]
 
 Options:
   
-  -h                 	--help            
-  				 Show this help message and exit
+  -h                 	--help
+						Show this help message and exit
  
   -n BASES           	--number=BASES
                         The number of base pairs
@@ -19,13 +19,13 @@ Options:
                         The name of the output file
   
   -g GC              	--gcContentPercentage=GC
-                        The percentage of the simulated reference genome           				 that consists of guanines and cytosines
+                        The percentage of the simulated reference genome that consists of guanines and cytosines
 
   -b REPEATBASE      	--repeatBase=REPEATBASE
-                        The base to repeat in a repeat region containing 				 a single base
+                        The base to repeat in a repeat region containing a single base
   
-  -r REPEATREGIONCOUNT --repeatRegionCount=REPEATREGIONCOUNT
-                        The number of times to repeat a single base 					 region
+  -r REPEATREGIONCOUNT  --repeatRegionCount=REPEATREGIONCOUNT
+                        The number of times to repeat a single base region
   
   -l REPEATBASELENGTH 	--repeatBaseLength=REPEATBASELENGTH
                         The length of a single base region
@@ -45,3 +45,5 @@ Options:
   -d DELETIONPERCENT 	--deletionPercent=DELETIONPERCENT
                         The percent of deletions
 
+  -c CONVERTFORMAT      --convertFormat=CONVERTFORMAT
+	        			Format to convert fasta file to; clustal, fastq-illumina, fastq-sanger, fastq-solexa, phylip, phd, tab, or stockholm
