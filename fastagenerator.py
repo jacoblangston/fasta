@@ -14,6 +14,7 @@ from optparse import OptionParser
 from os.path import basename
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import PairedFastaQualIterator
+from ReadsGenerator import *
 
 def addOptions(parser):
     parser.add_option("-n", "--number", dest="bases", 
@@ -26,7 +27,7 @@ def addOptions(parser):
                       help = "The base to repeat in a repeat region containing a single base")
     parser.add_option("-R", "--repeatRegionCount", dest="repeatRegionCount",
                       help = "The number of times to repeat a single base region")
-    parser.add_option("-l", "--repeatBaseLength", dest="repeatBaseLength",
+    parser.add_option("-L", "--repeatBaseLength", dest="repeatBaseLength",
                       help = "The length of a single base region")
     parser.add_option("-s", "--segment", dest="segment",
                       help = "A specific region to repeat")
@@ -38,8 +39,14 @@ def addOptions(parser):
                       help = "The percent of insertions")
     parser.add_option("-d", "--deletionPercent", dest="deletionPercent",
                       help = "The percent of deletions")
-    parser.add_option("-c", "--convertFormat", dest="convertFormat",
+    parser.add_option("-C", "--convertFormat", dest="convertFormat",
                       help = "Format to convert fasta file to; clustal, fastq-illumina, fastq-sanger, fastq-solexa, phylip, phd, tab, stockholm")
+    parser.add_option("-r", "--generateReads", dest="generateReads",
+                      help = "Specify the method to use for read generation; 454, exact, illumina-single, or illumina-paired")
+    parser.add_option("-l", "--readLength", dest="readLength",
+                      help = "The length of the read")
+    parser.add_option("-c", "--readCoverage", dest="readCoverage",
+                      help = "Specify the amount of coverage")
     
 def changeBase(baseList, currentBase):
     newBase = currentBase
@@ -52,13 +59,13 @@ def changeBase(baseList, currentBase):
 def convert(convertFormat, filename, qualFilename):
     print "\nFastA file information:"
     for seq_record in SeqIO.parse(filename, "fasta"):
-        print "Number of Records: " + str(seq_record)  
+        print str(seq_record)  
     
     try:
         with open(baseFilename + ".fastq", "w") as q:
             records = PairedFastaQualIterator(open(filename), open(qualFilename))
             count = SeqIO.write(records, q, convertFormat)
-            print "Converted %i records" % count 
+            print "Converted %i records" % count
     except ValueError, e:
         print "Encountered error converting file: " + str(e)
     
@@ -80,7 +87,7 @@ def generateQual(baseFilename, numberOfBases, minQuality, maxQuality):
     
 def getQuality(minQuality, maxQuality):
     return random.randint(minQuality, maxQuality)
-
+            
 if __name__ == '__main__':
     parser = OptionParser()
     addOptions(parser)
@@ -96,6 +103,8 @@ if __name__ == '__main__':
     insertionPercent = 0
     deletionPercent = 0
     numberOfRepeatCharacters = 0
+    readLength = 0
+    readCoverage = 0
     minQuality = 11
     maxQuality = 41
     repeatBase = []
@@ -103,8 +112,9 @@ if __name__ == '__main__':
     segmentCount= []
     repeatBaseLength = []
     segment = []
-    repeatSegment = ''
+    repeatSegment = None
     convertFormat = None
+    generateReads = None
     
     if 'gc' in optionsDictionary and optionsDictionary['gc'] is not None:
         gcContentPercentage = float(optionsDictionary['gc'])
@@ -145,6 +155,26 @@ if __name__ == '__main__':
         
     if 'convertFormat' in optionsDictionary and optionsDictionary['convertFormat'] is not None:
         convertFormat = optionsDictionary['convertFormat']
+        
+    if 'generateReads' in optionsDictionary and optionsDictionary['generateReads'] is not None:
+        generateReads = optionsDictionary['generateReads']
+        
+        if generateReads != "454" and generateReads != "exact" and generateReads != "illumina-single" and generateReads != "illumina-paired":
+            print "Only 454, exact, illumina-single, and illumina-paired methods are available to generate reads."
+            sys.exit()
+            
+        if generateReads == "illumina-single":
+            readLength = 150
+        elif generateReads == "illumina-paired":
+            readLength = 100
+        elif generateReads == "454":
+            readLength = 400
+        
+    if 'readLength' in optionsDictionary and optionsDictionary['readLength'] is not None:
+        readLength = int(optionsDictionary['readLength'])
+        
+    if 'readCoverage' in optionsDictionary and optionsDictionary['readCoverage'] is not None:
+        readCoverage = int(optionsDictionary['readCoverage'])
     
     if len(repeatBase) != len(repeatRegionCount) or len(repeatBase) != len(repeatBaseLength) or len(repeatRegionCount) != len(repeatBaseLength):
         print "Repeat bases, repeat region count, and repeat base length must have the same number of items specified."
@@ -249,7 +279,7 @@ if __name__ == '__main__':
             sortedBases.pop()
             i += 1
          
-    totalBases = len(sortedBases)    
+    totalBases = len(sortedBases)
     
     i = 0
     while i < len(sortedBases):
@@ -268,5 +298,15 @@ if __name__ == '__main__':
     
     if convertFormat is not None:
         convert(convertFormat, filename, qualFilename)
+        
+    if generateReads is not None:
+        if generateReads == "454":
+            g = FourFiveFour(baseList, filename, baseFilename, readCoverage, readLength)
+        elif generateReads == "illumina-single":
+            g = IlluminaSingle(baseList, filename, baseFilename, readCoverage, readLength)
+        elif generateReads == "illumina-paired":
+            g = IlluminaPaired(baseList, filename, baseFilename, readCoverage, readLength)
+        elif generateReads == "exact":
+            g = Exact(baseList, filename, baseFilename, readCoverage, readLength)
         
     sys.exit()
