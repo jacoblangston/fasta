@@ -1,11 +1,11 @@
-FastA Generator
+Reference Simulator
 =====
 
 Current de novo assembly software encounters difficulty while attempting to assemble heterogeneous data. This tool can create simulated genomic data with increasing levels of heterogeneity. Developers that are currently constructing algorithms to handle such data will be able to test their de novo assemblers throughout production. Not only can the degree of heterogeneity, but also the number, length, and composition of repeat regions of the simulated data can be controlled by the user. In this way, assembly developers can focus on certain biological characteristics more exclusively, as well as the ability of their assemblers to handle data of increasing complexity.
  
-The FastA Generator simulates genomic data and outputs the information into a fasta file format. Only diploid genomes can be simulated. While the generated data will not perfectly emulate real-world data, the user will be able to control such biological attributes as GC content and interspersed repeats in an effort to mirror genuine genomic data. The output of the de novo assembler can be compared to the simulated genome reference and the robustness of an algorithm may be assessed.
+The Reference Simulator simulates genomic data and outputs the information into a fasta file format. Only diploid genomes can be simulated. While the generated data will not perfectly emulate real-world data, the user will be able to control such biological attributes as GC content and interspersed repeats in an effort to mirror genuine genomic data. The output of the de novo assembler can be compared to the simulated genome reference and the robustness of an algorithm may be assessed.
 
-Usage: fastagenerator.py [options]
+Usage: RefSim.py [options]
 
 Options:
   

@@ -55,7 +55,8 @@ if __name__ == '__main__':
     baseList = ['G', 'C', 'T', 'A']
     numberOfBases = 1000
     readLength = 0
-    readCoverage = 0    
+    readCoverage = 0
+    heterozygosity = 0
     filename = None
     baseFilename = None
     generateReads = None
@@ -68,7 +69,13 @@ if __name__ == '__main__':
     else:
         filename = 'originalsequence-' + str(numberOfBases) + '.fasta'
     
-    baseFilename = basename(filename).rsplit(".")[0]      
+    baseFilename = basename(filename).rsplit(".")[0]    
+    
+    if 'heterozygosity' in optionsDictionary and optionsDictionary['heterozygosity'] is not None:
+        try:
+            heterozygosity = float(optionsDictionary['heterozygosity'])
+        except ValueError:
+            print "Heterozygosity must be numeric."    
         
     if 'generateReads' in optionsDictionary and optionsDictionary['generateReads'] is not None:
         generateReads = optionsDictionary['generateReads']
@@ -94,6 +101,9 @@ if __name__ == '__main__':
     if 'readCoverage' in optionsDictionary and optionsDictionary['readCoverage'] is not None:
         try:
             readCoverage = int(optionsDictionary['readCoverage'])
+            
+            if heterozygosity > 0:
+                readCoverage /= 2
         except ValueError:
             print "Read coverage must be an int, i.e. 25."
             sys.exit()
@@ -101,8 +111,12 @@ if __name__ == '__main__':
     if generateReads is not None and readCoverage == 0:
         print "Read coverage must be specified to generate reads."
         sys.exit()
+        
+    if generateReads is not None and generateReads == "exact" and readLength == 0:
+        print "Read length must be specified to generate reads for exact.  There is no default value."
+        sys.exit()
     
-    f = FastaGenerator(baseList, optionsDictionary, filename, baseFilename, numberOfBases)
+    f = FastaGenerator(baseList, optionsDictionary, filename, baseFilename, numberOfBases, heterozygosity)
     if generateReads is not None:
         if generateReads == "454":
             g = FourFiveFour(baseList, filename, baseFilename, readCoverage, readLength)

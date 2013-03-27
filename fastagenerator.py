@@ -25,12 +25,13 @@ class FastaGenerator(object):
     repeatSegment = None
     convertFormat = None    
 
-    def __init__(self, baseList, optionsDictionary, filename, baseFilename, numberOfBases):
+    def __init__(self, baseList, optionsDictionary, filename, baseFilename, numberOfBases, heterozygosity):
         self.baseList = baseList
         self.optionsDictionary = optionsDictionary
         self.filename = filename
         self.baseFilename = baseFilename
         self.numberOfBases = numberOfBases
+        self.heterozygosity = heterozygosity
         self.parseOptions()
         self.generateFasta()
     
@@ -52,13 +53,7 @@ class FastaGenerator(object):
             
         if 'segmentCount' in self.optionsDictionary and self.optionsDictionary['segmentCount'] is not None:
             self.segmentCount = self.optionsDictionary['segmentCount'].split(',')
-            
-        if 'heterozygosity' in self.optionsDictionary and self.optionsDictionary['heterozygosity'] is not None:
-            try:
-                self.heterozygosity = float(self.optionsDictionary['heterozygosity'])
-            except ValueError:
-                print "Heterozygosity must be numeric."
-            
+                
         if 'insertionPercent' in self.optionsDictionary and self.optionsDictionary['insertionPercent'] is not None:
             try:
                 self.insertionPercent = float(self.optionsDictionary['insertionPercent'])
