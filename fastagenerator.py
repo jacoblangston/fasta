@@ -1,100 +1,12 @@
 # Author: Kelsey and Jacob Langston
 # Url: https://github.com/jacoblangston/fasta
-#
-# Generates fasta and qual files using the format specified at:
-# http://en.wikipedia.org/wiki/FASTA_format
-# http://bioperl.org/wiki/Qual_sequence_format
-#
-# How to convert fasta to fastq using BioPython:
-# http://biopython.org/DIST/docs/tutorial/Tutorial.html#sec:SeqIO-fastq-conversion
-
 import random
-import sys
 from optparse import OptionParser
-from os.path import basename
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import PairedFastaQualIterator
-from ReadsGenerator import *
 
-def addOptions(parser):
-    parser.add_option("-n", "--number", dest="bases", 
-                      help = "The number of base pairs")
-    parser.add_option("-o", "--output", dest="output",
-                      help = "The name of the output file")
-    parser.add_option("-g", "--gcContentPercentage", dest="gc",
-                      help = "The percentage of the simulated reference genome that consists of guanines and cytosines")
-    parser.add_option("-b", "--repeatBase", dest="repeatBase",
-                      help = "The base to repeat in a repeat region containing a single base")
-    parser.add_option("-R", "--repeatRegionCount", dest="repeatRegionCount",
-                      help = "The number of times to repeat a single base region")
-    parser.add_option("-L", "--repeatBaseLength", dest="repeatBaseLength",
-                      help = "The length of a single base region")
-    parser.add_option("-s", "--segment", dest="segment",
-                      help = "A specific region to repeat")
-    parser.add_option("-t", "--segmentCount", dest="segmentCount",
-                      help = "The number of times to repeat a segment")
-    parser.add_option("-H", "--heterozygosity", dest="heterozygosity",
-                      help = "Percent of heterozygosity")
-    parser.add_option("-i", "--insertionPercent", dest="insertionPercent",
-                      help = "The percent of insertions")
-    parser.add_option("-d", "--deletionPercent", dest="deletionPercent",
-                      help = "The percent of deletions")
-    parser.add_option("-C", "--convertFormat", dest="convertFormat",
-                      help = "Format to convert fasta file to; clustal, fastq-illumina, fastq-sanger, fastq-solexa, phylip, phd, tab, stockholm")
-    parser.add_option("-r", "--generateReads", dest="generateReads",
-                      help = "Specify the method to use for read generation; 454, exact, illumina-single, or illumina-paired")
-    parser.add_option("-l", "--readLength", dest="readLength",
-                      help = "The length of the read")
-    parser.add_option("-c", "--readCoverage", dest="readCoverage",
-                      help = "Specify the amount of coverage")
-    
-def changeBase(baseList, currentBase):
-    newBase = currentBase
-    while newBase == currentBase:
-        index = random.randint(0, len(baseList) - 1)
-        newBase = baseList[index]
-        
-    return newBase
-
-def convert(convertFormat, filename, qualFilename):
-    print "\nFastA file information:"
-    for seq_record in SeqIO.parse(filename, "fasta"):
-        print str(seq_record)  
-    
-    try:
-        with open(baseFilename + ".fastq", "w") as q:
-            records = PairedFastaQualIterator(open(filename), open(qualFilename))
-            count = SeqIO.write(records, q, convertFormat)
-            print "Converted %i records" % count
-    except ValueError, e:
-        print "Encountered error converting file: " + str(e)
-    
-def generateQual(baseFilename, numberOfBases, minQuality, maxQuality):
-    qualFilename = baseFilename + ".qual"
-    quality = ">" + baseFilename + "\n"
-    
-    i = 0
-    while i < numberOfBases:
-        quality += str(getQuality(minQuality, maxQuality)) + " "
-        if i > 0 and i % 79 == 0:
-            quality += "\n"
-        i += 1
-        
-    with open(qualFilename, "w") as q:
-        q.write(quality)
-        
-    return qualFilename
-    
-def getQuality(minQuality, maxQuality):
-    return random.randint(minQuality, maxQuality)
-            
-if __name__ == '__main__':
-    parser = OptionParser()
-    addOptions(parser)
-    (options, args) = parser.parse_args()
-    optionsDictionary = vars(options)
-    
-    baseList = ['G', 'C', 'T', 'A']
+class FastaGenerator(object):
+    baseList = []
     filename = None
     baseFilename = None
     numberOfBases = 1000
@@ -103,8 +15,6 @@ if __name__ == '__main__':
     insertionPercent = 0
     deletionPercent = 0
     numberOfRepeatCharacters = 0
-    readLength = 0
-    readCoverage = 0
     minQuality = 11
     maxQuality = 41
     repeatBase = []
@@ -113,200 +23,219 @@ if __name__ == '__main__':
     repeatBaseLength = []
     segment = []
     repeatSegment = None
-    convertFormat = None
-    generateReads = None
+    convertFormat = None    
+
+    def __init__(self, baseList, optionsDictionary, filename, baseFilename, numberOfBases):
+        self.baseList = baseList
+        self.optionsDictionary = optionsDictionary
+        self.filename = filename
+        self.baseFilename = baseFilename
+        self.numberOfBases = numberOfBases
+        self.parseOptions()
+        self.generateFasta()
     
-    if 'gc' in optionsDictionary and optionsDictionary['gc'] is not None:
-        gcContentPercentage = float(optionsDictionary['gc'])
+    def parseOptions(self):
+        if 'gc' in self.optionsDictionary and self.optionsDictionary['gc'] is not None:
+            self.gcContentPercentage = float(self.optionsDictionary['gc'])
+                
+        if 'repeatBase' in self.optionsDictionary and self.optionsDictionary['repeatBase'] is not None:
+            self.repeatBase = self.optionsDictionary['repeatBase'].split(',')
         
-    if 'bases' in optionsDictionary and optionsDictionary['bases'] is not None:
-        numberOfBases = int(optionsDictionary['bases'])
+        if 'repeatRegionCount' in self.optionsDictionary and self.optionsDictionary['repeatRegionCount'] is not None:
+            self.repeatRegionCount = self.optionsDictionary['repeatRegionCount'].split(',')
+        
+        if 'repeatBaseLength' in self.optionsDictionary and self.optionsDictionary['repeatBaseLength'] is not None:
+            self.repeatBaseLength = self.optionsDictionary['repeatBaseLength'].split(',')
             
-    if 'output' in optionsDictionary and optionsDictionary['output'] is not None:
-        filename = optionsDictionary['output']
-    else:
-        filename = 'originalsequence-' + str(numberOfBases) + '.fasta'
-    
-    baseFilename = basename(filename).rsplit(".")[0]  
-    
-    if 'repeatBase' in optionsDictionary and optionsDictionary['repeatBase'] is not None:
-        repeatBase = optionsDictionary['repeatBase'].split(',')
-    
-    if 'repeatRegionCount' in optionsDictionary and optionsDictionary['repeatRegionCount'] is not None:
-        repeatRegionCount = optionsDictionary['repeatRegionCount'].split(',')
-    
-    if 'repeatBaseLength' in optionsDictionary and optionsDictionary['repeatBaseLength'] is not None:
-        repeatBaseLength = optionsDictionary['repeatBaseLength'].split(',')
-        
-    if 'segment' in optionsDictionary and optionsDictionary['segment'] is not None:
-        segment = optionsDictionary['segment'].split(',')
-        
-    if 'segmentCount' in optionsDictionary and optionsDictionary['segmentCount'] is not None:
-        segmentCount = optionsDictionary['segmentCount'].split(',')
-        
-    if 'heterozygosity' in optionsDictionary and optionsDictionary['heterozygosity'] is not None:
-        heterozygosity = float(optionsDictionary['heterozygosity'])
-        
-    if 'insertionPercent' in optionsDictionary and optionsDictionary['insertionPercent'] is not None:
-        insertionPercent = float(optionsDictionary['insertionPercent'])
-        
-    if 'deletionPercent' in optionsDictionary and optionsDictionary['deletionPercent'] is not None:
-        deletionPercent = float(optionsDictionary['deletionPercent'])
-        
-    if 'convertFormat' in optionsDictionary and optionsDictionary['convertFormat'] is not None:
-        convertFormat = optionsDictionary['convertFormat']
-        
-    if 'generateReads' in optionsDictionary and optionsDictionary['generateReads'] is not None:
-        generateReads = optionsDictionary['generateReads']
-        
-        if generateReads != "454" and generateReads != "exact" and generateReads != "illumina-single" and generateReads != "illumina-paired":
-            print "Only 454, exact, illumina-single, and illumina-paired methods are available to generate reads."
+        if 'segment' in self.optionsDictionary and self.optionsDictionary['segment'] is not None:
+            self.segment = self.optionsDictionary['segment'].split(',')
+            
+        if 'segmentCount' in self.optionsDictionary and self.optionsDictionary['segmentCount'] is not None:
+            self.segmentCount = self.optionsDictionary['segmentCount'].split(',')
+            
+        if 'heterozygosity' in self.optionsDictionary and self.optionsDictionary['heterozygosity'] is not None:
+            try:
+                self.heterozygosity = float(self.optionsDictionary['heterozygosity'])
+            except ValueError:
+                print "Heterozygosity must be numeric."
+            
+        if 'insertionPercent' in self.optionsDictionary and self.optionsDictionary['insertionPercent'] is not None:
+            try:
+                self.insertionPercent = float(self.optionsDictionary['insertionPercent'])
+            except ValueError:
+                print "Insertion percent must be numeric."
+            
+        if 'deletionPercent' in self.optionsDictionary and self.optionsDictionary['deletionPercent'] is not None:
+            try:
+                self.deletionPercent = float(self.optionsDictionary['deletionPercent'])
+            except ValueError:
+                print "Deletion percent must be numeric."
+            
+        if 'convertFormat' in self.optionsDictionary and self.optionsDictionary['convertFormat'] is not None:
+            self.convertFormat = self.optionsDictionary['convertFormat']        
+            
+        if len(self.repeatBase) != len(self.repeatRegionCount) or len(self.repeatBase) != len(self.repeatBaseLength) or len(self.repeatRegionCount) != len(self.repeatBaseLength):
+            print "Repeat bases, repeat region count, and repeat base length must have the same number of items specified."
+            sys.exit()
+                
+        if len(self.segment) != len(self.segmentCount):
+            print "Segment and segment count must have the same number of items specified."
             sys.exit()
             
-        if generateReads == "illumina-single":
-            readLength = 150
-        elif generateReads == "illumina-paired":
-            readLength = 100
-        elif generateReads == "454":
-            readLength = 400
+        if self.heterozygosity == 0 and (self.insertionPercent > 0 or self.deletionPercent > 0):
+            print "Heterozygosity must be specified for insertions and deletions."
+            sys.exit()        
         
-    if 'readLength' in optionsDictionary and optionsDictionary['readLength'] is not None:
-        readLength = int(optionsDictionary['readLength'])
-        
-    if 'readCoverage' in optionsDictionary and optionsDictionary['readCoverage'] is not None:
-        readCoverage = int(optionsDictionary['readCoverage'])
-    
-    if len(repeatBase) != len(repeatRegionCount) or len(repeatBase) != len(repeatBaseLength) or len(repeatRegionCount) != len(repeatBaseLength):
-        print "Repeat bases, repeat region count, and repeat base length must have the same number of items specified."
-        sys.exit()
-        
-    if len(segment) != len(segmentCount):
-        print "Segment and segment count must have the same number of items specified."
-        sys.exit()
-        
-    if heterozygosity == 0 and (insertionPercent > 0 or deletionPercent > 0):
-        print "Heterozygosity must be specified for insertions and deletions."
-        sys.exit()
-
-    i = 0
-    baseCharacterCountTotal = 0
-    while i < len(repeatBase):
-        baseCharacterCountTotal += (len(repeatBase[i]) * int(repeatBaseLength[i]) * int(repeatRegionCount[i]))
-        i += 1
-        
-    i = 0
-    segmentCharacterCountTotal = 0
-    while i < len(segment):
-        segmentCharacterCountTotal += (len(segment[i]) * int(segmentCount[i]))
-        i += 1
-            
-    numberOfRepeatCharacters = baseCharacterCountTotal + segmentCharacterCountTotal
-
-    output = '>' + baseFilename + '\n'
-    bases = []
-    
-    i = 0
-    while i < (numberOfBases - numberOfRepeatCharacters):
-        if i <= gcContentPercentage * numberOfBases:
-            bases.append(baseList[random.randint(0,1)])
-        else:
-            bases.append(baseList[random.randint(2,3)])
-        i += 1
-        
-    random.shuffle(bases)
-    
-    i = len(repeatRegionCount)
-    while i > 0:
-        k = 0
-        while k < int(repeatRegionCount[i - 1]):
-            index = random.randint(0, len(bases))
-            l = 0
-            while l < int(repeatBaseLength[i - 1]):
-                bases.insert(index + l, repeatBase[i - 1].strip())
-                l += 1
-            k += 1
-        i -= 1
-    
-    i = len(segmentCount)
-    while i > 0:
-        x = 0
-        while x < int(segmentCount[i - 1]):
-            index = random.randint(0, len(bases))
-            l = 0
-            while l < len(segment[i - 1]):
-                bases.insert(index + l, segment[i - 1][l].strip())
-                l += 1
-            x += 1
-        i -= 1
-    
-    sortedBases = []
-    i = 0
-    while i < len(bases):
-        sortedBases.append(bases[i])
-        i += 1
-            
-    if heterozygosity > 0:
-        sortedBases += sortedBases
-        
+    def generateFasta(self):
         i = 0
-        changedBases = []
-        numberOfBasesToChange = int((len(sortedBases) - 1) * heterozygosity)
-        while i < numberOfBasesToChange:
-            index = random.randint(numberOfBases, len(sortedBases) - 1)
-            while changedBases.count(index) > 0:
-                index = random.randint(numberOfBases, len(sortedBases) - 1)
-            
-            currentBase = sortedBases[index]
-            sortedBases[index] = changeBase(baseList, currentBase)
-            changedBases.append(index)
+        baseCharacterCountTotal = 0
+        while i < len(self.repeatBase):
+            baseCharacterCountTotal += (len(self.repeatBase[i]) * int(self.repeatBaseLength[i]) * int(self.repeatRegionCount[i]))
             i += 1
             
         i = 0
-        numberOfDeletions = int((len(sortedBases) - 1) * deletionPercent)
-        while i < numberOfDeletions:
-            index = random.randint(numberOfBases, len(sortedBases) - 1)
-            base = baseList[random.randint(0, len(baseList) - 1)]
-            sortedBases.pop(index)
-            sortedBases.append(base)
-            i += 1        
+        segmentCharacterCountTotal = 0
+        while i < len(self.segment):
+            segmentCharacterCountTotal += (len(self.segment[i]) * int(self.segmentCount[i]))
+            i += 1
+                
+        numberOfRepeatCharacters = baseCharacterCountTotal + segmentCharacterCountTotal
+    
+        output = '>' + self.baseFilename + '\n'
+        bases = []
         
         i = 0
-        numberOfInsertions = int((len(sortedBases) - 1) * insertionPercent)
-        while i < numberOfInsertions:
-            index = random.randint(numberOfBases, len(sortedBases) - 1)
-            base = baseList[random.randint(0, len(baseList) - 1)]
-            sortedBases.insert(index, base)
-            sortedBases.pop()
+        while i < (self.numberOfBases - numberOfRepeatCharacters):
+            if i <= self.gcContentPercentage * self.numberOfBases:
+                bases.append(self.baseList[random.randint(0,1)])
+            else:
+                bases.append(self.baseList[random.randint(2,3)])
             i += 1
-         
-    totalBases = len(sortedBases)
-    
-    i = 0
-    while i < len(sortedBases):
-        if i > 0 and i % 79 == 0:
-            sortedBases.insert(i - 1, "\n")
-        i += 1
-    
-    output += ''.join(sortedBases)
-    output += "\n"
-    
-    with open(filename, 'w') as fa:
-        fa.write(output)
-        print "Wrote " + filename
-    
-    qualFilename = generateQual(baseFilename, totalBases, minQuality, maxQuality)
-    
-    if convertFormat is not None:
-        convert(convertFormat, filename, qualFilename)
+            
+        random.shuffle(bases)
         
-    if generateReads is not None:
-        if generateReads == "454":
-            g = FourFiveFour(baseList, filename, baseFilename, readCoverage, readLength)
-        elif generateReads == "illumina-single":
-            g = IlluminaSingle(baseList, filename, baseFilename, readCoverage, readLength)
-        elif generateReads == "illumina-paired":
-            g = IlluminaPaired(baseList, filename, baseFilename, readCoverage, readLength)
-        elif generateReads == "exact":
-            g = Exact(baseList, filename, baseFilename, readCoverage, readLength)
+        i = len(self.repeatRegionCount)
+        while i > 0:
+            k = 0
+            while k < int(self.repeatRegionCount[i - 1]):
+                index = random.randint(0, len(bases))
+                l = 0
+                while l < int(self.repeatBaseLength[i - 1]):
+                    bases.insert(index + l, self.repeatBase[i - 1].strip())
+                    l += 1
+                k += 1
+            i -= 1
         
-    sys.exit()
+        i = len(self.segmentCount)
+        while i > 0:
+            x = 0
+            while x < int(self.segmentCount[i - 1]):
+                index = random.randint(0, len(bases))
+                l = 0
+                while l < len(self.segment[i - 1]):
+                    bases.insert(index + l, self.segment[i - 1][l].strip())
+                    l += 1
+                x += 1
+            i -= 1
+        
+        sortedBases = []
+        i = 0
+        while i < len(bases):
+            sortedBases.append(bases[i])
+            i += 1
+                
+        if self.heterozygosity > 0:
+            sortedBases += sortedBases
+            
+            i = 0
+            changedBases = []
+            numberOfBasesToChange = int((len(sortedBases) - 1) * self.heterozygosity)
+            while i < numberOfBasesToChange:
+                index = random.randint(self.numberOfBases, len(sortedBases) - 1)
+                while changedBases.count(index) > 0:
+                    index = random.randint(self.numberOfBases, len(sortedBases) - 1)
+                
+                currentBase = sortedBases[index]
+                sortedBases[index] = changeBase(currentBase)
+                changedBases.append(index)
+                i += 1
+                
+            i = 0
+            numberOfDeletions = int((len(sortedBases) - 1) * deletionPercent)
+            while i < numberOfDeletions:
+                index = random.randint(self.numberOfBases, len(sortedBases) - 1)
+                base = baseList[random.randint(0, len(baseList) - 1)]
+                sortedBases.pop(index)
+                sortedBases.append(base)
+                i += 1        
+            
+            i = 0
+            numberOfInsertions = int((len(sortedBases) - 1) * insertionPercent)
+            while i < numberOfInsertions:
+                index = random.randint(self.numberOfBases, len(sortedBases) - 1)
+                base = baseList[random.randint(0, len(baseList) - 1)]
+                sortedBases.insert(index, base)
+                sortedBases.pop()
+                i += 1
+             
+        totalBases = len(sortedBases)
+        
+        i = 0
+        while i < len(sortedBases):
+            if i > 0 and i % 79 == 0:
+                sortedBases.insert(i - 1, "\n")
+            i += 1
+        
+        output += ''.join(sortedBases)
+        output += "\n"
+        
+        with open(self.filename, 'w') as fa:
+            fa.write(output)
+            print "Wrote " + self.filename
+        
+        qualFilename = self.generateQual(totalBases)
+        
+        if self.convertFormat is not None:
+            convert(convertFormat, qualFilename)        
+    
+    def changeBase(self, currentBase):
+        newBase = currentBase
+        while newBase == currentBase:
+            index = random.randint(0, len(self.baseList) - 1)
+            newBase = self.baseList[index]
+            
+        return newBase
+    
+    def convert(self, qualFilename):
+        print "\nFastA file information:"
+        for seq_record in SeqIO.parse(self.filename, "fasta"):
+            print str(seq_record)  
+        
+        try:
+            with open(baseFilename + ".fastq", "w") as q:
+                records = PairedFastaQualIterator(open(self.filename), open(qualFilename))
+                count = SeqIO.write(records, q, self.convertFormat)
+                print "Converted %i records" % count
+        except ValueError, e:
+            print "Encountered error converting file: " + str(e)
+        
+    def generateQual(self, numberOfBases):
+        qualFilename = self.baseFilename + ".qual"
+        quality = ">" + self.baseFilename + "\n"
+        
+        i = 0
+        while i < numberOfBases:
+            quality += str(self.getQuality()) + " "
+            if i > 0 and i % 79 == 0:
+                quality += "\n"
+            i += 1
+            
+        with open(qualFilename, "w") as q:
+            q.write(quality)
+            print "Wrote " + qualFilename
+            
+        return qualFilename
+        
+    def getQuality(self):
+        return random.randint(self.minQuality, self.maxQuality)
+    

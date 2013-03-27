@@ -34,6 +34,9 @@ class Exact(object):
 	filename = str(self.baseFilename) + ".fa"
 	sequenceLength = len(sequence)
 	randomLimit = sequenceLength - self.readLength
+	print self.coverage
+	print sequenceLength
+	print self.readLength
 	cutoff = self.coverage * sequenceLength/self.readLength
 	complete = 0
 	records = []
