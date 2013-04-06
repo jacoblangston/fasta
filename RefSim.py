@@ -45,6 +45,8 @@ def addOptions(parser):
                       help = "The length of the read")
     parser.add_option("-c", "--readCoverage", dest="readCoverage",
                       help = "Specify the amount of coverage")
+    parser.add_option("-f", "--referenceFile", dest="referenceFile",
+                      help = "The path of an existing reference file in FastA format.  Using this option will not generate a FastA reference file.")
                 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -68,8 +70,11 @@ if __name__ == '__main__':
         filename = optionsDictionary['output']
     else:
         filename = 'originalsequence-' + str(numberOfBases) + '.fasta'
+        
+    if 'referenceFile' in optionsDictionary and optionsDictionary['referenceFile'] is not None:
+        filename = optionsDictionary['referenceFile']
     
-    baseFilename = basename(filename).rsplit(".")[0]    
+    baseFilename = basename(filename).rsplit(".")[0]  
     
     if 'heterozygosity' in optionsDictionary and optionsDictionary['heterozygosity'] is not None:
         try:
@@ -116,7 +121,9 @@ if __name__ == '__main__':
         print "Read length must be specified to generate reads for exact.  There is no default value."
         sys.exit()
     
-    f = FastaGenerator(baseList, optionsDictionary, filename, baseFilename, numberOfBases, heterozygosity)
+    if 'referenceFile' in optionsDictionary and optionsDictionary['referenceFile'] is None:
+        f = FastaGenerator(baseList, optionsDictionary, filename, baseFilename, numberOfBases, heterozygosity)
+    
     if generateReads is not None:
         if generateReads == "454":
             g = FourFiveFour(baseList, filename, baseFilename, readCoverage, readLength)
