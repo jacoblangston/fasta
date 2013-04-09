@@ -24,7 +24,7 @@ Options:
   -b REPEATBASE      	--repeatBase=REPEATBASE
                         The base to repeat in a repeat region containing a single base
   
-  -r REPEATREGIONCOUNT  --repeatRegionCount=REPEATREGIONCOUNT
+  -R REPEATREGIONCOUNT  --repeatRegionCount=REPEATREGIONCOUNT
                         The number of times to repeat a single base region
   
   -L REPEATBASELENGTH 	--repeatBaseLength=REPEATBASELENGTH
@@ -45,14 +45,14 @@ Options:
   -d DELETIONPERCENT 	--deletionPercent=DELETIONPERCENT
                         The percent of deletions
 
-  -C CONVERTFORMAT      --convertFormat=CONVERTFORMAT
-	        			Format to convert fasta file to; clustal, fastq-illumina, fastq-sanger, fastq-solexa, phylip, phd, tab, or stockholm
+  -C CONVERTFORMAT      --convertFormat=CONVERTFORMA
+  			Format to convert fasta file to; clustal, fastq-illumina, fastq-sanger, fastq-solexa, phylip, phd, tab, or stockholm
 						
-  -r GENERATEREADS		--generateReads=GENERATEREADS
-						Specify the method to use for read generation; 454, exact, illumina-single, or illumina-paired
+  -r GENERATEREADS	--generateReads=GENERATEREADS
+  			Specify the method to use for read generation; 454, exact, illumina-single, or illumina-paired
 						
-  -l READLENGTH			--readLength=READLENGTH
-						The length of the read
+  -l READLENGTH		--readLength=READLENGTH
+  			The length of the read
 						
-  -c READCOVERAGE		--readCoverage=READCOVERAGE
-						Specify the amount of coverage
+  -c READCOVERAGE	--readCoverage=READCOVERAGE
+			Specify the amount of coverage
