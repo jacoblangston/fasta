@@ -7,7 +7,14 @@ The Reference Simulator simulates genomic data and outputs the information into 
 
 Usage: RefSim.py [options]
 
-Options:
+Quick Start
+========
+* Download and install the lastest version of Python 2.x from http://www.python.org/download/
+* Download and install the version of BioPython from http://biopython.org/wiki/Download that maps to the installed version of Python.  For instance if you
+installed Python 2.7.x then you will need to download and install biopython-<version>.win32-py2.7.exe.
+* Run git clone https://github.com/jacoblangston/fasta.git.
+
+Options
 ========
   
   -h                 	--help
@@ -57,6 +64,9 @@ Options:
   									
   -c READCOVERAGE	--readCoverage=READCOVERAGE
 			Specify the amount of coverage
+			
+  -f REFERENCEFILE	--referenceFile=REFERENCEFILE
+  			The path of an existing reference file in FastA format.  Using this option will not generate a FastA reference file.
 					
 Usage
 =====
