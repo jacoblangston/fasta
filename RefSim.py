@@ -11,7 +11,7 @@
 import sys
 from optparse import OptionParser
 from os.path import basename
-from FastaGenerator import *
+from fastagenerator import *
 from ReadsGenerator import *
 
 def addOptions(parser):
