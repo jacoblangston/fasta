@@ -1,7 +1,8 @@
 # This is based on the ReadMaker perl script by Nozomu Okuda.
-# Author: Jacob Langston.
+# Author: Kelsey and Jacob Langston
 # Url: https://github.com/jacoblangston/fasta
 import random
+import math
 from Bio import SeqIO
 from Bio import Seq
 from Bio import SeqRecord
@@ -38,7 +39,7 @@ class Exact(object):
 	records = []
         i = 0
         while i < cutoff:
-            start = int(random.randint(0, randomLimit)) + 1;
+            start = int(random.randint(0, randomLimit)) + 1
 	    tempSequence = sequence[start:start + self.readLength]
 
 	    if random.random() < 0.5:
@@ -66,7 +67,7 @@ class FourFiveFour(Exact):
 	numberOfCharactersToDelete = 0
 	
 	# Determine the number of errors to generate and assign to the variable x
-	x = int(self.readLength - (self.readLength - (self.error * self.readLength)))
+	x = math.ceil(self.error * self.readLength)
 
 	# Add a variable to hold the last three characters
 	errorBuffer = []
@@ -74,8 +75,13 @@ class FourFiveFour(Exact):
 	while i < self.readLength:
 	    char = read[i:i + 1]
 	    
-	    # Add the current character to the error buffer
-	    errorBuffer.append(char)
+	    # Add the current character to the error buffer if the array is empty
+	    # or it matches the first character.  Clear the errorBuffer if a different
+	    # character is found
+	    if not errorBuffer or char == errorBuffer[0]:
+		errorBuffer.append(char)
+	    else:
+		errorBuffer = []
 	    
 	    # Check the error buffer.  If a repeat is detected, force an insertion or
 	    # deletion error.
@@ -84,7 +90,7 @@ class FourFiveFour(Exact):
 		forceInsertOrDelete = True
 		
 		# Clear the error buffer if it has 3 elements
-		errorBuffer = []		
+		errorBuffer = []	
 		    
 	    if (x > 0 and random.random() > 0.5) or forceInsertOrDelete:
 		errorType = 0
@@ -133,8 +139,8 @@ class IlluminaSingle(Exact):
 	numberOfCharactersToDelete = 0
 	
 	# Determine the number of errors to generate and assign to the variable x
-	x = int(self.readLength - (self.readLength - (self.error * self.readLength)))
-	startOfErrors = int(self.readLength/3)
+	x = math.ceil(self.error * self.readLength)
+	startOfErrors = math.ceil(self.readLength/3)
 	
 	i = 0
 	while i < self.readLength:
