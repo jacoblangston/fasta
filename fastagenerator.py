@@ -1,6 +1,7 @@
 # Author: Kelsey and Jacob Langston
 # Url: https://github.com/jacoblangston/fasta
 import random
+import copy
 from optparse import OptionParser
 from Bio import SeqIO
 from Bio.SeqIO.QualityIO import PairedFastaQualIterator
@@ -37,7 +38,10 @@ class FastaGenerator(object):
     
     def parseOptions(self):
         if 'gc' in self.optionsDictionary and self.optionsDictionary['gc'] is not None:
-            self.gcContentPercentage = float(self.optionsDictionary['gc'])
+            try:
+                self.gcContentPercentage = float(self.optionsDictionary['gc'])
+            except ValueError:
+                print "GC percentage must be numeric."
                 
         if 'repeatBase' in self.optionsDictionary and self.optionsDictionary['repeatBase'] is not None:
             self.repeatBase = self.optionsDictionary['repeatBase'].split(',')
@@ -82,12 +86,20 @@ class FastaGenerator(object):
             sys.exit()        
         
     def generateFasta(self):
+        """
+        While the variable i is less than the length of the user-specified single-nucleotide repeat regions,
+        the program will multiply each specified base to it correspondingly specified length and the number
+        of times that it is to occur in the reference in order to get the total base character count.
+        """
         i = 0
         baseCharacterCountTotal = 0
         while i < len(self.repeatBase):
             baseCharacterCountTotal += (len(self.repeatBase[i]) * int(self.repeatBaseLength[i]) * int(self.repeatRegionCount[i]))
             i += 1
             
+        """
+        Purpose is to get the total base character count for the user-specified segments.
+        """
         i = 0
         segmentCharacterCountTotal = 0
         while i < len(self.segment):
@@ -96,9 +108,23 @@ class FastaGenerator(object):
                 
         numberOfRepeatCharacters = baseCharacterCountTotal + segmentCharacterCountTotal
     
+        """
+        The output variable will contain the contents of the reference file. This line
+        specifies the first line within the fasta file. 
+        """
         output = '>' + self.baseFilename + '\n'
+        
+        """
+        Specifies an empty array.
+        """
         bases = []
         
+        """
+        Subtracts the total number of characters in repeat regions and segments from the total number of
+        characters. Determines number of G's and C's that need to be present in order to have the specified
+        GC content percentage and generates the random string of G's and C's. Then generates the remaining
+        characters with a random string of A's and T's.
+        """
         i = 0
         while i < (self.numberOfBases - numberOfRepeatCharacters):
             if i <= self.gcContentPercentage * self.numberOfBases:
@@ -109,6 +135,10 @@ class FastaGenerator(object):
             
         random.shuffle(bases)
         
+        """
+        Purpose is to find random locations within the reference to insert the
+        single-nucleotide repeat regions.
+        """
         i = len(self.repeatRegionCount)
         while i > 0:
             k = 0
@@ -121,6 +151,9 @@ class FastaGenerator(object):
                 k += 1
             i -= 1
         
+        """
+        Purpose is to find random locations within the reference to insert the segments.
+        """
         i = len(self.segmentCount)
         while i > 0:
             x = 0
@@ -133,15 +166,24 @@ class FastaGenerator(object):
                 x += 1
             i -= 1
         
-        sortedBases = []
-        i = 0
-        while i < len(bases):
-            sortedBases.append(bases[i])
-            i += 1
+        """
+        Copying the bases array, which contains all of the bases up to this point including
+        the inserted repeat regions and segments, into a sorted bases array.
+        """
+        sortedBases = copy.deepcopy(bases)
                 
         if self.heterozygosity > 0:
+            """
+            If heterozygosity is selected, then the sortedBases array will 
+            duplicate itself.
+            """
             sortedBases += sortedBases
             
+            """
+            Purpose: to randomly choose a nucleotide in the duplicate region, or 
+            second half of the heterozygous reference file, and change that base 
+            to another randomly chosen nucleotide.
+            """
             i = 0
             changedBases = []
             numberOfBasesToChange = int((len(sortedBases) - 1) * self.heterozygosity)
@@ -151,12 +193,16 @@ class FastaGenerator(object):
                     index = random.randint(self.numberOfBases, len(sortedBases) - 1)
                 
                 currentBase = sortedBases[index]
-                sortedBases[index] = changeBase(currentBase)
+                sortedBases[index] = self.changeBase(currentBase)
                 changedBases.append(index)
                 i += 1
-                
+            
+            """
+            For every nucleotide that is deleted within the duplicate portion of the 
+            reference sequence, a nucleotide is added to the end of the reference.
+            """
             i = 0
-            numberOfDeletions = int((len(sortedBases) - 1) * deletionPercent)
+            numberOfDeletions = int((len(sortedBases) - 1) * self.deletionPercent)
             while i < numberOfDeletions:
                 index = random.randint(self.numberOfBases, len(sortedBases) - 1)
                 base = baseList[random.randint(0, len(baseList) - 1)]
@@ -164,8 +210,13 @@ class FastaGenerator(object):
                 sortedBases.append(base)
                 i += 1        
             
+            """
+            For every nucleotide that is inserted into the duplicate portion of the
+            reference sequence, a nucleotide is subtracted from the end of the
+            reference.
+            """
             i = 0
-            numberOfInsertions = int((len(sortedBases) - 1) * insertionPercent)
+            numberOfInsertions = int((len(sortedBases) - 1) * self.insertionPercent)
             while i < numberOfInsertions:
                 index = random.randint(self.numberOfBases, len(sortedBases) - 1)
                 base = baseList[random.randint(0, len(baseList) - 1)]
@@ -175,12 +226,19 @@ class FastaGenerator(object):
              
         totalBases = len(sortedBases)
         
+        """
+        Formatting the fasta file so that each line gets 79 characters.
+        """
         i = 0
         while i < len(sortedBases):
             if i > 0 and i % 79 == 0:
                 sortedBases.insert(i - 1, "\n")
             i += 1
         
+        """
+        In the fasta file, the nucleotide sequence generated is added to the first 
+        line.
+        """
         output += ''.join(sortedBases)
         output += "\n"
         
@@ -193,6 +251,12 @@ class FastaGenerator(object):
         if self.convertFormat is not None:
             convert(convertFormat, qualFilename)        
     
+    """
+    First assigns newBase to equal the currentBase (Ex: A = A). Then has the newBase
+    change to a different, randomly chosen base by randomly chosing a number 0 to 3 and
+    assigning the newBase to be the corresponding base (unless the same base as the 
+    currentBase had randomly been chosen).
+    """
     def changeBase(self, currentBase):
         newBase = currentBase
         while newBase == currentBase:
