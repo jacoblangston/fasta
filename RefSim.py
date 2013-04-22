@@ -39,8 +39,8 @@ def addOptions(parser):
                       help = "The percent of deletions")
     parser.add_option("-C", "--convertFormat", dest="convertFormat",
                       help = "Format to convert fasta file to; clustal, fastq-illumina, fastq-sanger, fastq-solexa, phylip, phd, tab, stockholm")
-    parser.add_option("-r", "--generateReads", dest="generateReads",
-                      help = "Specify the method to use for read generation; 454, exact, illumina-single, or illumina-paired")
+    parser.add_option("-r", "--errorModel", dest="errorModel",
+                      help = "Specify the error model to use for read generation; 454, exact, illumina-single, or illumina-paired")
     parser.add_option("-l", "--readLength", dest="readLength",
                       help = "The length of the read")
     parser.add_option("-c", "--readCoverage", dest="readCoverage",
@@ -49,23 +49,41 @@ def addOptions(parser):
                       help = "The path of an existing reference file in FastA format.  Using this option will not generate a FastA reference file.")
                 
 if __name__ == '__main__':
-    parser = OptionParser()
-    addOptions(parser)
-    (options, args) = parser.parse_args()
-    optionsDictionary = vars(options)
+    parser = OptionParser() # Creates the parser object
+    addOptions(parser) 
+    (options, args) = parser.parse_args() # Parses the arguments that the user enters
+    optionsDictionary = vars(options) # Assigns the arguments to the parser destination
     
-    baseList = ['G', 'C', 'T', 'A']
+    baseList = ['G', 'C', 'T', 'A'] # Array of characters
     numberOfBases = 1000
     readLength = 0
     readCoverage = 0
     heterozygosity = 0
     filename = None
-    baseFilename = None
-    generateReads = None
+    baseFilename = None # Filename without the extension
+    errorModel = None
     
+    """
+    If the key exists in the optionsDictionary and the user has entered in a value, 
+    then assigns the entered value to its appropriate key in the dictionary.
+    
+    The key is the parser dest for an option.
+    """
     if 'bases' in optionsDictionary and optionsDictionary['bases'] is not None:
-        numberOfBases = int(optionsDictionary['bases'])    
+        try:
+            numberOfBases = int(optionsDictionary['bases'])
+        except ValueError:
+            print "Number of bases must be a number."
+            sys.exit()        
     
+    """
+    If the key "output" is in the optionsDictionary and the user has entered in a value for it,
+    then that value will be assigned to the filename variable.
+    
+    If the key "output" does not exist in the optionsDictionary or if the user does not enter
+    in a value for the key "output", then the filename variable will be 
+    "originalsequence-<numberOfBases>.fasta".
+    """
     if 'output' in optionsDictionary and optionsDictionary['output'] is not None:
         filename = optionsDictionary['output']
     else:
@@ -74,33 +92,39 @@ if __name__ == '__main__':
     if 'referenceFile' in optionsDictionary and optionsDictionary['referenceFile'] is not None:
         filename = optionsDictionary['referenceFile']
     
+    """
+    Getting the file name without the extention. Defines the variable baseFilename.
+    Takes the filename, searches from right to left for a period, splits at each
+    period it finds, and selects the filename. Only one period is assumed.
+    """
     baseFilename = basename(filename).rsplit(".")[0]  
     
     if 'heterozygosity' in optionsDictionary and optionsDictionary['heterozygosity'] is not None:
         try:
             heterozygosity = float(optionsDictionary['heterozygosity'])
         except ValueError:
-            print "Heterozygosity must be numeric."    
+            print "Heterozygosity must be numeric."
+            sys.exit()
         
-    if 'generateReads' in optionsDictionary and optionsDictionary['generateReads'] is not None:
-        generateReads = optionsDictionary['generateReads']
+    if 'errorModel' in optionsDictionary and optionsDictionary['errorModel'] is not None:
+        errorModel = optionsDictionary['errorModel']
         
-        if generateReads != "454" and generateReads != "exact" and generateReads != "illumina-single" and generateReads != "illumina-paired":
-            print "Only 454, exact, illumina-single, and illumina-paired methods are available to generate reads."
+        if errorModel != "454" and errorModel != "exact" and errorModel != "illumina-single" and errorModel != "illumina-paired":
+            print "Only 454, exact, illumina-single, and illumina-paired error models are available to generate reads."
             sys.exit()
             
-        if generateReads == "illumina-single":
+        if errorModel == "illumina-single":
             readLength = 150
-        elif generateReads == "illumina-paired":
+        elif errorModel == "illumina-paired":
             readLength = 100
-        elif generateReads == "454":
+        elif errorModel == "454":
             readLength = 400
         
     if 'readLength' in optionsDictionary and optionsDictionary['readLength'] is not None:
         try:
             readLength = int(optionsDictionary['readLength'])
         except ValueError:
-            print "Read length must be an int, i.e. 1000."
+            print "Read length must be a number, i.e. 1000."
             sys.exit()
         
     if 'readCoverage' in optionsDictionary and optionsDictionary['readCoverage'] is not None:
@@ -110,28 +134,36 @@ if __name__ == '__main__':
             if heterozygosity > 0:
                 readCoverage /= 2
         except ValueError:
-            print "Read coverage must be an int, i.e. 25."
+            print "Read coverage must be a number, i.e. 25."
             sys.exit()
         
-    if generateReads is not None and readCoverage == 0:
+    if errorModel is not None and readCoverage <= 0:
         print "Read coverage must be specified to generate reads."
         sys.exit()
         
-    if generateReads is not None and generateReads == "exact" and readLength == 0:
+    if errorModel is not None and errorModel == "exact" and readLength <= 0:
         print "Read length must be specified to generate reads for exact.  There is no default value."
         sys.exit()
     
+    """
+    Generates the fasta file if the option -f is not specified.
+    """
     if 'referenceFile' in optionsDictionary and optionsDictionary['referenceFile'] is None:
-        f = FastaGenerator(baseList, optionsDictionary, filename, baseFilename, numberOfBases, heterozygosity)
+        FastaGenerator(baseList, optionsDictionary, filename, baseFilename, numberOfBases, heterozygosity)
     
-    if generateReads is not None:
-        if generateReads == "454":
-            g = FourFiveFour(baseList, filename, baseFilename, readCoverage, readLength)
-        elif generateReads == "illumina-single":
-            g = IlluminaSingle(baseList, filename, baseFilename, readCoverage, readLength)
-        elif generateReads == "illumina-paired":
-            g = IlluminaPaired(baseList, filename, baseFilename, readCoverage, readLength)
-        elif generateReads == "exact":
-            g = Exact(baseList, filename, baseFilename, readCoverage, readLength)
+    """
+    If the user provides a value for the variable errorModel and that value is "454",
+    then the program will generate a 454 reads file. The listed variables are
+    passed in as parameters to the constructor of the class.
+    """
+    if errorModel is not None:
+        if errorModel == "454":
+            FourFiveFour(baseList, filename, baseFilename, readCoverage, readLength)
+        elif errorModel == "illumina-single":
+            IlluminaSingle(baseList, filename, baseFilename, readCoverage, readLength)
+        elif errorModel == "illumina-paired":
+            IlluminaPaired(baseList, filename, baseFilename, readCoverage, readLength)
+        elif errorModel == "exact":
+            Exact(baseList, filename, baseFilename, readCoverage, readLength)
         
     sys.exit()
